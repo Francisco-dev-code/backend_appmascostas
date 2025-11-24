@@ -1,0 +1,148 @@
+### Pruebas de API - Backend GuauMiau
+
+# IMPORTANTE: Asegúrate de que el servidor esté corriendo en http://localhost:8080
+# Ejecuta: gradlew.bat bootRun
+
+### Variables
+@baseUrl = http://localhost:8080
+
+###############################################
+# AUTENTICACIÓN
+###############################################
+
+### 1. Registrar un nuevo usuario
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Juan Pérez",
+  "email": "juan@example.com",
+  "password": "123456",
+  "phone": "555-1234",
+  "pets": []
+}
+
+### 2. Registrar otro usuario
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "María García",
+  "email": "maria@example.com",
+  "password": "password123",
+  "phone": "555-5678",
+  "pets": []
+}
+
+### 3. Login con usuario existente
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan@example.com",
+  "password": "123456"
+}
+
+### 4. Login fallido (contraseña incorrecta)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "juan@example.com",
+  "password": "wrongpassword"
+}
+
+### 5. Login fallido (usuario no existe)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "noexiste@example.com",
+  "password": "123456"
+}
+
+###############################################
+# MASCOTAS
+###############################################
+
+### 6. Obtener todas las mascotas
+GET {{baseUrl}}/pets
+
+### 7. Agregar una mascota (Perro)
+POST {{baseUrl}}/pets
+Content-Type: application/json
+
+{
+  "name": "Firulais",
+  "type": "Perro"
+}
+
+### 8. Agregar otra mascota (Gato)
+POST {{baseUrl}}/pets
+Content-Type: application/json
+
+{
+  "name": "Michi",
+  "type": "Gato"
+}
+
+### 9. Agregar mascota (Loro)
+POST {{baseUrl}}/pets
+Content-Type: application/json
+
+{
+  "name": "Perico",
+  "type": "Loro"
+}
+
+### 10. Actualizar mascota (cambiar ID 1 según necesites)
+PUT {{baseUrl}}/pets/1
+Content-Type: application/json
+
+{
+  "name": "Firulais Jr",
+  "type": "Perro Golden"
+}
+
+### 11. Actualizar mascota inexistente (debe dar 404)
+PUT {{baseUrl}}/pets/999
+Content-Type: application/json
+
+{
+  "name": "No existe",
+  "type": "Fantasma"
+}
+
+### 12. Eliminar mascota (cambiar ID 2 según necesites)
+DELETE {{baseUrl}}/pets/2
+
+### 13. Eliminar mascota inexistente (debe dar 404)
+DELETE {{baseUrl}}/pets/999
+
+### 14. Obtener todas las mascotas después de cambios
+GET {{baseUrl}}/pets
+
+###############################################
+# CONSOLA H2 (Abrir en navegador)
+###############################################
+
+# URL: http://localhost:8080/h2-console
+# JDBC URL: jdbc:h2:mem:testdb
+# User Name: sa
+# Password: (vacío)
+
+###############################################
+# QUERIES SQL ÚTILES PARA H2 CONSOLE
+###############################################
+
+# Ver todos los usuarios
+# SELECT * FROM USERS;
+
+# Ver todas las mascotas
+# SELECT * FROM PETS;
+
+# Contar usuarios
+# SELECT COUNT(*) FROM USERS;
+
+# Buscar usuario por email
+# SELECT * FROM USERS WHERE EMAIL = 'juan@example.com';
