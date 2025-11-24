@@ -1,0 +1,973 @@
+================================================================================
+   GUÍA COMPLETA: INTEGRAR BACKEND SPRING BOOT CON APP ANDROID STUDIO
+================================================================================
+
+📋 ÍNDICE:
+1. Información del Backend
+2. Configuración Requerida en Android Studio
+3. Endpoints Disponibles (API REST)
+4. Modelos de Datos (Deben Coincidir)
+5. Configuración de Retrofit
+6. Flujo de Autenticación
+7. Flujo CRUD de Mascotas
+8. Pruebas y Validación
+9. Troubleshooting
+
+================================================================================
+1. INFORMACIÓN DEL BACKEND
+================================================================================
+
+TECNOLOGÍAS:
+- Lenguaje: Kotlin
+- Framework: Spring Boot 4.0.0
+- Base de Datos: H2 (en memoria)
+- Build Tool: Gradle
+- Puerto: 8080
+
+UBICACIÓN DEL PROYECTO:
+C:\Users\frang\Downloads\guaumiau
+
+COMANDO PARA INICIAR EL SERVIDOR:
+gradlew.bat bootRun
+
+ESTADO ESPERADO:
+Tomcat started on port 8080 (http) with context path '/'
+
+CONSOLA H2 (Para ver la BD):
+URL: http://localhost:8080/h2-console
+JDBC URL: jdbc:h2:mem:testdb
+User: sa
+Password: (vacío)
+
+================================================================================
+2. CONFIGURACIÓN REQUERIDA EN ANDROID STUDIO
+================================================================================
+
+A) PERMISOS EN AndroidManifest.xml
+----------------------------------
+Agregar dentro de <manifest> pero FUERA de <application>:
+
+<uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+Dentro de <application>:
+
+<application
+    android:name=".TuApplication"
+    android:usesCleartextTraffic="true"
+    ...>
+    
+</application>
+
+IMPORTANTE: usesCleartextTraffic="true" permite usar HTTP (no HTTPS) 
+            para desarrollo local.
+
+
+B) DEPENDENCIAS EN build.gradle.kts (Module: app)
+-------------------------------------------------
+
+dependencies {
+    // Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    
+    // OkHttp
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    
+    // Hilt (Inyección de Dependencias)
+    implementation("com.google.dagger:hilt-android:2.48")
+    kapt("com.google.dagger:hilt-compiler:2.48")
+    
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+    
+    // DataStore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+}
+
+Después de agregar: SYNC NOW
+
+
+C) URL BASE PARA RETROFIT
+--------------------------
+
+EMULADOR DE ANDROID:
+private const val BASE_URL = "http://10.0.2.2:8080/"
+
+DISPOSITIVO FÍSICO (WiFi):
+private const val BASE_URL = "http://TU_IP_LOCAL:8080/"
+Ejemplo: "http://192.168.1.10:8080/"
+
+Para saber tu IP:
+- Windows: cmd > ipconfig (buscar IPv4 en WiFi)
+- Debe estar en la misma red WiFi que tu dispositivo
+
+IMPORTANTE: 
+- 10.0.2.2 es la IP especial del EMULADOR para acceder a localhost
+- NO usar "localhost" o "127.0.0.1" (no funcionará)
+- Siempre terminar con "/" al final
+
+================================================================================
+3. ENDPOINTS DISPONIBLES (API REST)
+================================================================================
+
+BASE URL: http://10.0.2.2:8080/
+
+──────────────────────────────────────────────────────────────────────────────
+A) AUTENTICACIÓN
+──────────────────────────────────────────────────────────────────────────────
+
+1. REGISTRAR USUARIO
+   Método: POST
+   URL: /auth/register
+   Headers: Content-Type: application/json
+   Body (JSON):
+   {
+     "name": "Juan Pérez",
+     "email": "juan@example.com",
+     "password": "123456",
+     "phone": "555-1234",
+     "pets": []
+   }
+   
+   Respuestas:
+   - 200 OK: Usuario creado exitosamente
+   - 400 Bad Request: Email ya existe
+
+
+2. LOGIN
+   Método: POST
+   URL: /auth/login
+   Headers: Content-Type: application/json
+   Body (JSON):
+   {
+     "email": "juan@example.com",
+     "password": "123456"
+   }
+   
+   Respuesta Exitosa (200 OK):
+   {
+     "token": "token_falso_1"
+   }
+   
+   Respuestas de Error:
+   - 401 Unauthorized: Credenciales incorrectas
+
+
+──────────────────────────────────────────────────────────────────────────────
+B) MASCOTAS (CRUD COMPLETO)
+──────────────────────────────────────────────────────────────────────────────
+
+1. OBTENER TODAS LAS MASCOTAS
+   Método: GET
+   URL: /pets
+   
+   Respuesta (200 OK):
+   [
+     {
+       "id": 1,
+       "name": "Firulais",
+       "type": "Perro"
+     },
+     {
+       "id": 2,
+       "name": "Michi",
+       "type": "Gato"
+     }
+   ]
+
+
+2. AGREGAR MASCOTA
+   Método: POST
+   URL: /pets
+   Headers: Content-Type: application/json
+   Body (JSON):
+   {
+     "name": "Firulais",
+     "type": "Perro"
+   }
+   
+   Respuesta (200 OK):
+   {
+     "id": 1,
+     "name": "Firulais",
+     "type": "Perro"
+   }
+
+
+3. ACTUALIZAR MASCOTA
+   Método: PUT
+   URL: /pets/{id}
+   Ejemplo: /pets/1
+   Headers: Content-Type: application/json
+   Body (JSON):
+   {
+     "name": "Firulais Jr",
+     "type": "Perro Golden"
+   }
+   
+   Respuestas:
+   - 200 OK: Mascota actualizada
+   - 404 Not Found: Mascota no existe
+
+
+4. ELIMINAR MASCOTA
+   Método: DELETE
+   URL: /pets/{id}
+   Ejemplo: /pets/1
+   
+   Respuestas:
+   - 200 OK: Mascota eliminada
+   - 404 Not Found: Mascota no existe
+
+
+================================================================================
+4. MODELOS DE DATOS (DEBEN COINCIDIR CON EL BACKEND)
+================================================================================
+
+Los modelos en tu app Android DEBEN tener exactamente los mismos campos 
+que el backend para que Retrofit funcione correctamente.
+
+──────────────────────────────────────────────────────────────────────────────
+User.kt
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.model
+
+data class User(
+    val id: Long? = null,
+    val name: String = "",
+    val email: String = "",
+    val password: String = "",
+    val phone: String = "",
+    val pets: List<Pet> = emptyList()
+)
+
+NOTAS:
+- id es nullable (Long?) porque lo genera la base de datos
+- pets puede ser List o MutableList según necesites
+
+
+──────────────────────────────────────────────────────────────────────────────
+Pet.kt
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.model
+
+data class Pet(
+    val id: Long? = null,
+    val name: String = "",
+    val type: String = ""
+)
+
+
+──────────────────────────────────────────────────────────────────────────────
+LoginRequest.kt
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.model
+
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+
+──────────────────────────────────────────────────────────────────────────────
+LoginResponse.kt
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.model
+
+data class LoginResponse(
+    val token: String
+)
+
+
+================================================================================
+5. CONFIGURACIÓN DE RETROFIT EN ANDROID
+================================================================================
+
+──────────────────────────────────────────────────────────────────────────────
+A) AppModule.kt (di/AppModule.kt)
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.di
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
+import com.tuapp.data.remote.AuthService
+import com.tuapp.data.remote.PetService
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+    
+    // *** IMPORTANTE: Cambiar según tu entorno ***
+    // Emulador: "http://10.0.2.2:8080/"
+    // Dispositivo físico: "http://TU_IP:8080/"
+    private const val BASE_URL = "http://10.0.2.2:8080/"
+    
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(
+                HttpLoggingInterceptor().apply {
+                    level = HttpLoggingInterceptor.Level.BODY
+                }
+            )
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideAuthService(retrofit: Retrofit): AuthService {
+        return retrofit.create(AuthService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun providePetService(retrofit: Retrofit): PetService {
+        return retrofit.create(PetService::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideDataStore(
+        @ApplicationContext context: Context
+    ): DataStore<Preferences> {
+        return context.dataStore
+    }
+}
+
+private val Context.dataStore: DataStore<Preferences> by 
+    preferencesDataStore(name = "user_prefs")
+
+
+──────────────────────────────────────────────────────────────────────────────
+B) AuthService.kt (data/remote/AuthService.kt)
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.remote
+
+import com.tuapp.data.model.LoginRequest
+import com.tuapp.data.model.LoginResponse
+import com.tuapp.data.model.User
+import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.POST
+
+interface AuthService {
+    
+    @POST("auth/register")
+    suspend fun register(@Body user: User): Response<Void>
+    
+    @POST("auth/login")
+    suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+}
+
+
+──────────────────────────────────────────────────────────────────────────────
+C) PetService.kt (data/remote/PetService.kt)
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp.data.remote
+
+import com.tuapp.data.model.Pet
+import retrofit2.Response
+import retrofit2.http.*
+
+interface PetService {
+    
+    @GET("pets")
+    suspend fun getPets(): Response<List<Pet>>
+    
+    @POST("pets")
+    suspend fun addPet(@Body pet: Pet): Response<Pet>
+    
+    @PUT("pets/{id}")
+    suspend fun updatePet(
+        @Path("id") id: Long,
+        @Body pet: Pet
+    ): Response<Pet>
+    
+    @DELETE("pets/{id}")
+    suspend fun deletePet(@Path("id") id: Long): Response<Void>
+}
+
+
+──────────────────────────────────────────────────────────────────────────────
+D) Application.kt
+──────────────────────────────────────────────────────────────────────────────
+
+package com.tuapp
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+@HiltAndroidApp
+class TuApplication : Application()
+
+Y en AndroidManifest.xml:
+
+<application
+    android:name=".TuApplication"
+    ...>
+
+
+================================================================================
+6. FLUJO DE AUTENTICACIÓN
+================================================================================
+
+PASO 1: REGISTRO
+-----------------
+Usuario → Pantalla de Registro → Llena formulario
+       → App llama a authService.register(user)
+       → Backend valida (email único)
+       → Si OK: 200, muestra "Registro exitoso"
+       → Si email existe: 400, muestra "Email ya registrado"
+
+
+PASO 2: LOGIN
+--------------
+Usuario → Pantalla de Login → Ingresa email/password
+       → App llama a authService.login(LoginRequest)
+       → Backend valida credenciales
+       → Si OK: Devuelve token
+       → App guarda token en DataStore
+       → Navega a Home
+
+
+PASO 3: PERSISTENCIA (DataStoreManager)
+----------------------------------------
+
+class DataStoreManager @Inject constructor(
+    private val dataStore: DataStore<Preferences>
+) {
+    companion object {
+        private val TOKEN_KEY = stringPreferencesKey("auth_token")
+    }
+    
+    suspend fun saveToken(token: String) {
+        dataStore.edit { prefs ->
+            prefs[TOKEN_KEY] = token
+        }
+    }
+    
+    suspend fun getToken(): String? {
+        return dataStore.data.map { prefs ->
+            prefs[TOKEN_KEY]
+        }.first()
+    }
+    
+    suspend fun clearSession() {
+        dataStore.edit { it.clear() }
+    }
+    
+    fun isLoggedIn(): Flow<Boolean> {
+        return dataStore.data.map { prefs ->
+            prefs[TOKEN_KEY] != null
+        }
+    }
+}
+
+
+PASO 4: AUTO-LOGIN
+-------------------
+App inicia → Verifica DataStore
+           → Si hay token: Va directo a Home
+           → Si no hay token: Muestra Login
+
+
+================================================================================
+7. FLUJO CRUD DE MASCOTAS
+================================================================================
+
+A) LISTAR MASCOTAS (Home Screen)
+---------------------------------
+1. Usuario logueado entra a Home
+2. ViewModel llama a petRepository.getPets()
+3. Backend ejecuta: SELECT * FROM PETS
+4. Devuelve lista JSON
+5. App muestra en RecyclerView o LazyColumn
+
+
+B) AGREGAR MASCOTA
+------------------
+1. Usuario presiona botón "+" o "Agregar"
+2. Muestra formulario (nombre, tipo)
+3. Usuario llena y presiona "Guardar"
+4. ViewModel llama a petRepository.addPet(Pet(name="Firulais", type="Perro"))
+5. Backend inserta en BD: INSERT INTO PETS...
+6. Devuelve la mascota con ID generado
+7. App actualiza la lista local
+
+
+C) ACTUALIZAR MASCOTA
+----------------------
+1. Usuario selecciona una mascota
+2. Muestra formulario con datos actuales
+3. Usuario modifica y presiona "Actualizar"
+4. ViewModel llama a petRepository.updatePet(id=1, pet=PetModificado)
+5. Backend actualiza: UPDATE PETS SET name=?, type=? WHERE id=1
+6. Devuelve mascota actualizada
+7. App actualiza la lista
+
+
+D) ELIMINAR MASCOTA
+-------------------
+1. Usuario hace swipe o presiona "Eliminar"
+2. Confirma acción
+3. ViewModel llama a petRepository.deletePet(id=1)
+4. Backend elimina: DELETE FROM PETS WHERE id=1
+5. Devuelve 200 OK
+6. App remueve de la lista local
+
+
+EJEMPLO DE VIEWMODEL:
+----------------------
+
+@HiltViewModel
+class PetViewModel @Inject constructor(
+    private val petRepository: PetRepository
+) : ViewModel() {
+    
+    private val _pets = MutableStateFlow<List<Pet>>(emptyList())
+    val pets: StateFlow<List<Pet>> = _pets.asStateFlow()
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
+    fun loadPets() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            petRepository.getPets().onSuccess { list ->
+                _pets.value = list
+            }.onFailure { error ->
+                // Manejar error
+            }
+            _isLoading.value = false
+        }
+    }
+    
+    fun addPet(name: String, type: String) {
+        viewModelScope.launch {
+            petRepository.addPet(Pet(name = name, type = type))
+                .onSuccess {
+                    loadPets() // Recargar lista
+                }
+        }
+    }
+    
+    fun deletePet(id: Long) {
+        viewModelScope.launch {
+            petRepository.deletePet(id).onSuccess {
+                loadPets() // Recargar lista
+            }
+        }
+    }
+}
+
+
+================================================================================
+8. PRUEBAS Y VALIDACIÓN
+================================================================================
+
+CHECKLIST ANTES DE PROBAR:
+---------------------------
+☐ Backend corriendo (gradlew.bat bootRun)
+☐ Ver mensaje: "Tomcat started on port 8080"
+☐ URL en AppModule: http://10.0.2.2:8080/
+☐ Permisos en AndroidManifest (INTERNET, usesCleartextTraffic)
+☐ Gradle Sync completo
+☐ Emulador iniciado
+
+
+PRUEBA 1: REGISTRO
+-------------------
+1. Abre la app
+2. Ve a Registro
+3. Llena: nombre="Juan", email="juan@test.com", password="123456", phone="555"
+4. Presiona "Registrar"
+5. Observa en la terminal del backend:
+   Hibernate: insert into users (email,name,password,phone,id) values (?,?,?,?,default)
+6. Resultado esperado: "Registro exitoso"
+
+
+PRUEBA 2: LOGIN
+----------------
+1. Ve a Login
+2. Ingresa email="juan@test.com", password="123456"
+3. Presiona "Login"
+4. Observa en el backend:
+   Hibernate: select u1_0.id,u1_0.email,u1_0.name,u1_0.password,u1_0.phone...
+5. Resultado esperado: Navega a Home con token guardado
+
+
+PRUEBA 3: VER MASCOTAS
+-----------------------
+1. En Home, la lista estará vacía al inicio
+2. Observa en el backend:
+   Hibernate: select p1_0.id,p1_0.name,p1_0.type from pets p1_0
+3. Resultado esperado: Lista vacía []
+
+
+PRUEBA 4: AGREGAR MASCOTA
+--------------------------
+1. Presiona botón "+"
+2. Llena: nombre="Firulais", tipo="Perro"
+3. Guarda
+4. Observa en el backend:
+   Hibernate: insert into pets (name,type,id) values (?,?,default)
+5. Resultado esperado: Mascota aparece en la lista con ID=1
+
+
+PRUEBA 5: ACTUALIZAR MASCOTA
+-----------------------------
+1. Selecciona "Firulais"
+2. Cambia nombre a "Firulais Jr"
+3. Guarda
+4. Observa en el backend:
+   Hibernate: update pets set name=?,type=? where id=?
+5. Resultado esperado: Nombre actualizado en la lista
+
+
+PRUEBA 6: ELIMINAR MASCOTA
+---------------------------
+1. Elimina "Firulais Jr"
+2. Observa en el backend:
+   Hibernate: delete from pets where id=?
+3. Resultado esperado: Mascota desaparece de la lista
+
+
+VERIFICACIÓN EN H2 CONSOLE:
+----------------------------
+1. Abre: http://localhost:8080/h2-console
+2. JDBC URL: jdbc:h2:mem:testdb
+3. User: sa, Password: (vacío)
+4. Ejecuta: SELECT * FROM USERS;
+5. Ejecuta: SELECT * FROM PETS;
+6. Deberías ver todos los datos insertados
+
+
+================================================================================
+9. TROUBLESHOOTING (SOLUCIÓN DE PROBLEMAS)
+================================================================================
+
+PROBLEMA: "Unable to resolve host" o "Failed to connect"
+---------------------------------------------------------
+CAUSA: Backend no está corriendo o URL incorrecta
+SOLUCIÓN:
+1. Verifica que el backend esté corriendo (gradlew.bat bootRun)
+2. Verifica la URL en AppModule: "http://10.0.2.2:8080/"
+3. Si usas dispositivo físico, cambia a tu IP local
+4. Verifica que el firewall no bloquee el puerto 8080
+
+
+PROBLEMA: "Cleartext HTTP traffic not permitted"
+-------------------------------------------------
+CAUSA: Android bloquea HTTP por defecto (requiere HTTPS)
+SOLUCIÓN:
+Agregar en AndroidManifest.xml:
+<application android:usesCleartextTraffic="true" ...>
+
+
+PROBLEMA: "NetworkOnMainThreadException"
+-----------------------------------------
+CAUSA: Llamadas de red en el hilo principal
+SOLUCIÓN:
+Usar suspend functions con viewModelScope.launch { }
+Todas las funciones de Retrofit deben ser suspend
+
+
+PROBLEMA: Error 400 Bad Request al registrar
+---------------------------------------------
+CAUSA: Email ya existe en la base de datos
+SOLUCIÓN:
+1. Es comportamiento esperado (validación del backend)
+2. Usar otro email
+3. O reiniciar el backend (borra la BD en memoria)
+
+
+PROBLEMA: Error 401 Unauthorized en login
+------------------------------------------
+CAUSA: Email o contraseña incorrectos
+SOLUCIÓN:
+1. Verifica las credenciales
+2. Asegúrate de haber registrado el usuario primero
+
+
+PROBLEMA: Error 404 Not Found
+------------------------------
+CAUSA: Ruta incorrecta en Retrofit
+SOLUCIÓN:
+Verifica que las rutas coincidan:
+- Backend: @PostMapping("/auth/register")
+- Android: @POST("auth/register")
+
+
+PROBLEMA: La lista de mascotas no se actualiza
+-----------------------------------------------
+CAUSA: No se recarga la lista después de agregar/eliminar
+SOLUCIÓN:
+Llamar a loadPets() después de cada operación exitosa:
+
+fun addPet(name: String, type: String) {
+    viewModelScope.launch {
+        petRepository.addPet(Pet(name = name, type = type))
+            .onSuccess {
+                loadPets() // ← Importante
+            }
+    }
+}
+
+
+PROBLEMA: App se cierra al abrir
+---------------------------------
+CAUSA POSIBLE 1: Falta @HiltAndroidApp en Application
+SOLUCIÓN: Agregar @HiltAndroidApp class TuApplication : Application()
+
+CAUSA POSIBLE 2: Falta permiso INTERNET
+SOLUCIÓN: Agregar <uses-permission android:name="android.permission.INTERNET" />
+
+CAUSA POSIBLE 3: Error en el modelo de datos
+SOLUCIÓN: Verificar que los modelos coincidan con el backend
+
+
+PROBLEMA: Backend se reinicia solo
+-----------------------------------
+CAUSA: Spring Boot DevTools activo
+SOLUCIÓN:
+Es normal. Reinicia automáticamente al detectar cambios.
+Para detenerlo: Ctrl+C en la terminal
+
+
+PROBLEMA: "Connection timeout"
+-------------------------------
+CAUSA: Backend tarda mucho en responder
+SOLUCIÓN:
+Aumentar timeout en OkHttpClient:
+.connectTimeout(60, TimeUnit.SECONDS)
+.readTimeout(60, TimeUnit.SECONDS)
+
+
+LOGS ÚTILES PARA DEBUGGING:
+----------------------------
+
+ANDROID (Logcat):
+Filtra por: "OkHttp" para ver las peticiones HTTP
+
+BACKEND (Terminal):
+Observa:
+- Hibernate queries (muestra todas las operaciones SQL)
+- HTTP status codes (200, 400, 404, etc.)
+- Stack traces si hay errores
+
+
+================================================================================
+10. COMANDOS ÚTILES
+================================================================================
+
+BACKEND:
+--------
+Iniciar servidor:
+> gradlew.bat bootRun
+
+Detener servidor:
+> Ctrl + C
+
+Compilar sin ejecutar:
+> gradlew.bat build
+
+Limpiar y compilar:
+> gradlew.bat clean build
+
+Ejecutar tests:
+> gradlew.bat test
+
+
+ANDROID STUDIO:
+---------------
+Limpiar proyecto:
+Build > Clean Project
+
+Rebuild proyecto:
+Build > Rebuild Project
+
+Invalidar caché:
+File > Invalidate Caches > Invalidate and Restart
+
+Ver logs:
+View > Tool Windows > Logcat
+
+
+VERIFICAR CONECTIVIDAD DESDE ANDROID:
+--------------------------------------
+Puedes agregar un endpoint de prueba en el backend:
+
+@GetMapping("/ping")
+fun ping() = "pong"
+
+Y llamarlo desde Android para verificar conexión:
+
+@GET("ping")
+suspend fun ping(): Response<String>
+
+
+================================================================================
+11. DATOS DE PRUEBA
+================================================================================
+
+USUARIOS DE PRUEBA:
+-------------------
+Usuario 1:
+{
+  "name": "Juan Pérez",
+  "email": "juan@test.com",
+  "password": "123456",
+  "phone": "555-1234"
+}
+
+Usuario 2:
+{
+  "name": "María García",
+  "email": "maria@test.com",
+  "password": "password123",
+  "phone": "555-5678"
+}
+
+
+MASCOTAS DE PRUEBA:
+-------------------
+Mascota 1:
+{
+  "name": "Firulais",
+  "type": "Perro"
+}
+
+Mascota 2:
+{
+  "name": "Michi",
+  "type": "Gato"
+}
+
+Mascota 3:
+{
+  "name": "Perico",
+  "type": "Loro"
+}
+
+
+================================================================================
+12. RESUMEN FINAL
+================================================================================
+
+ARQUITECTURA COMPLETA:
+----------------------
+
+Android App (Cliente)
+    ↓
+Retrofit (HTTP Client)
+    ↓
+OkHttp (Networking)
+    ↓
+Internet/WiFi
+    ↓
+http://10.0.2.2:8080/ (Emulador)
+    ↓
+Spring Boot Server (Backend)
+    ↓
+JPA/Hibernate (ORM)
+    ↓
+H2 Database (In-Memory)
+
+
+FLUJO COMPLETO DE DATOS:
+-------------------------
+
+1. Usuario registra cuenta en Android
+2. Android envía JSON con datos del usuario
+3. Backend recibe, valida y guarda en BD H2
+4. Backend responde con código HTTP (200/400)
+5. Android muestra mensaje de éxito/error
+
+6. Usuario hace login
+7. Backend valida credenciales
+8. Backend genera y devuelve token
+9. Android guarda token en DataStore
+
+10. Usuario logueado accede a Home
+11. Android pide lista de mascotas
+12. Backend consulta BD y devuelve JSON
+13. Android muestra lista en UI
+
+14. Usuario agrega/edita/elimina mascota
+15. Android envía petición al backend
+16. Backend ejecuta operación en BD
+17. Backend confirma con código HTTP
+18. Android actualiza UI local
+
+
+PUNTOS CLAVE:
+-------------
+✓ Backend DEBE estar corriendo antes de usar la app
+✓ URL correcta según entorno (emulador vs dispositivo)
+✓ Modelos de datos idénticos en backend y Android
+✓ Permisos configurados en AndroidManifest
+✓ Usar suspend functions para operaciones de red
+✓ Manejar estados de carga y errores
+✓ Verificar logs del backend para debugging
+
+
+CONTACTO/RECURSOS:
+------------------
+Proyecto Backend: C:\Users\frang\Downloads\guaumiau
+Archivo de pruebas: test-api.http
+Documentación completa: README_VS_CODE.md
+
+Spring Boot Docs: https://spring.io/projects/spring-boot
+Retrofit Docs: https://square.github.io/retrofit/
+Hilt Docs: https://developer.android.com/training/dependency-injection/hilt-android
+
+
+================================================================================
+FIN DE LA GUÍA
+================================================================================
+
+Con esta configuración, tu app Android Studio podrá comunicarse perfectamente
+con el backend Spring Boot para realizar todas las operaciones CRUD de usuarios
+y mascotas.
+
+¡Éxito con tu proyecto! 🐕🐱🚀
