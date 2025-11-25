@@ -17,5 +17,6 @@ data class User(
     val phone: String = "",
 
     @OneToMany(cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id") // Crea una columna en la tabla 'pets' para vincularlas
     val pets: MutableList<Pet> = mutableListOf()
 )

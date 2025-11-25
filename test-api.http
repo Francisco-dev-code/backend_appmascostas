@@ -22,7 +22,28 @@ Content-Type: application/json
   "pets": []
 }
 
-### 2. Registrar otro usuario
+### 2. Registrar usuario CON MASCOTA (Verificar cascade)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Ana López",
+  "email": "ana@example.com",
+  "password": "123456",
+  "phone": "555-9999",
+  "pets": [
+    {
+      "name": "Firulais",
+      "type": "Perro"
+    },
+    {
+      "name": "Michi",
+      "type": "Gato"
+    }
+  ]
+}
+
+### 3. Registrar otro usuario
 POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
@@ -34,7 +55,7 @@ Content-Type: application/json
   "pets": []
 }
 
-### 3. Login con usuario existente
+### 4. Login con usuario existente
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
